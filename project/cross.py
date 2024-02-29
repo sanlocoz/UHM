@@ -25,6 +25,9 @@ def rowIndextoTimestamp(row):
     
     return pd.Timestamp(year = year, month = month, day = day, hour = hour)
 
+def tagAutumnSpringWinterSummer():
+    return
+
 dir = "D:\\Wageningen\\Period 4\\Part 2\\project"
 os.chdir(dir)
 
@@ -32,3 +35,8 @@ files = os.listdir(dir)
 
 df = pd.read_csv("input\\PEQrQdrG_Lelystad_3h.dat", delim_whitespace = True, index_col= 0)
 df.index = df.apply(rowIndextoTimestamp, axis=1)
+
+start = pd.Timestamp(year=1974, month=1, day=1, hour=0) 
+end = pd.Timestamp(year=1975, month=1, day=1, hour=0) 
+
+df_input = df[np.logical_and(df.index>=start, df.index<=end)]
