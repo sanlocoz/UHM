@@ -69,7 +69,7 @@ features_table = features_table.interpolate()
 
 # # Convert dates to datetime format
 dates = pd.to_datetime(features_table.index)
-# features_table.Time = pd.to_datetime(features_table['Time'])
+features_table.index = pd.to_datetime(features_table.index)
 # # Index observations by their date
 # features_table = features_table.set_index('Time')
 
