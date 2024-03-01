@@ -25,8 +25,15 @@ def rowIndextoTimestamp(row):
     
     return pd.Timestamp(year = year, month = month, day = day, hour = hour)
 
-def tagAutumnSpringWinterSummer():
-    return
+def tagAutumnSpringWinterSummer(row):
+    if(row.name.month>=3 and row.name.month <=5):
+        return 1
+    elif(row.name.month>=5 and row.name.month <=8):
+        return 2
+    elif(row.name.month>=9 and row.name.month <=11):
+        return 3
+    else:
+        return 0
 
 def makingNewLag(df):
     return df
@@ -44,7 +51,7 @@ df = pd.read_csv("input\\PEQrQdrG_Lelystad_3h.dat", delim_whitespace = True, ind
 df.index = df.apply(rowIndextoTimestamp, axis=1)
 
 start = pd.Timestamp(year=1970, month=1, day=1, hour=0) 
-end = pd.Timestamp(year=1974, month=1, day=1, hour=0) 
+end = pd.Timestamp(year=1994, month=1, day=1, hour=0) 
 
 df_input = df[np.logical_and(df.index>=start, df.index<=end)]
 
@@ -151,4 +158,28 @@ for i in range(0, len(sum)):
         elif(j==(sum[i]-1)):
             Qdrain_Pbh[j, i] = Qdrain_Pbh_cum[j]
         else:
-            Qdrain_Pbh[j, i] = Qdrain_Pbh_cum[j]-Qdrain_Pbh_cum[j-sum[i]]            
+            Qdrain_Pbh[j, i] = Qdrain_Pbh_cum[j]-Qdrain_Pbh_cum[j-sum[i]]        
+            
+# Concatenate NumPy
+allData = np.concatenate([P, ET, Qdrain_Nwp, Qdrain_Pbh, Qrain_Nwp, Qrain_Pbh], axis=1)
+
+name = ['P','ET', 'QdN', 'QdP', 'QrN', 'QrP']
+columns = []
+
+for i in range(6):
+    for j in range(0, len(sum)):
+        columns.append(name[i]+str(sum[j]))
+        
+dfFinal = pd.DataFrame(allData, columns=columns)
+
+index = df_input.index
+
+df_input.reset_index(drop=True, inplace=True)
+dfFinal['GWN'] = df_input['GWL_Nwp']
+dfFinal['GWP'] = df_input['GWL_P']
+
+dfFinal.index = index
+
+dfFinal['S'] = df.apply(tagAutumnSpringWinterSummer, axis=1)
+
+dfFinal.to_csv('hello.csv', sep = ";", index=True)
