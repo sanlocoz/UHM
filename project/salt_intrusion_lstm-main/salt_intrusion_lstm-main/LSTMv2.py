@@ -112,7 +112,7 @@ test_scaled = pd.DataFrame(test_scaled, index=dates[split:], columns=vars_)
 # %% Create input data as tensors with shape:
 # issue date * preceding timesteps * variables
 
-# We have 12 features with chloride concentrations and 11 features with other
+# We have N_PRED features with chloride concentrations and N_OTHERVAR features with other
 # variables (here called quantity or qty variables). These must be treated
 # differently in the model and are therefore split into two separate tensors.
 # For the salt data, the input consists of measurements of the N_PAST preceding
@@ -121,17 +121,17 @@ test_scaled = pd.DataFrame(test_scaled, index=dates[split:], columns=vars_)
 # Salt data of the next day form the output dataset on which we train the
 # model.
 
-Qvar_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST, 12))
+Qvar_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST, N_PRED))
 Qvar_in.fill(np.nan)
-qty_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST+1, 11))
+qty_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST+1, N_OTHERVAR))
 qty_in.fill(np.nan)
-train_out = np.empty((train_scaled.shape[0]-N_PAST, 12))
+train_out = np.empty((train_scaled.shape[0]-N_PAST, N_PRED))
 train_out.fill(np.nan)
 
 for i in range(N_PAST, train_scaled.shape[0]):
-    Qvar_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[0:12]][i-N_PAST:i])
-    qty_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[12:23]][i-N_PAST:i+1])
-    train_out[i-N_PAST, :] = np.array(train_scaled.iloc[i, 0:12])
+    Qvar_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[0:N_PRED]][i-N_PAST:i])
+    qty_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[N_PRED:N_PRED+N_OTHERVAR]][i-N_PAST:i+1])
+    train_out[i-N_PAST, :] = np.array(train_scaled.iloc[i, 0:N_PRED])
 
 
 # %% Create and train the machine learning model, or load from file
@@ -165,8 +165,8 @@ def createmodel(path, nummodels):
 
     for m in range(nummodels):
         print('Fitting model ' + str(m))
-        SaltData = keras.Input(shape=(N_PAST, 12), name='salt_data')
-        QtyData = keras.Input(shape=(N_PAST+1, 11), name='quantity_data')
+        SaltData = keras.Input(shape=(N_PAST, N_PRED), name='salt_data')
+        QtyData = keras.Input(shape=(N_PAST+1, N_OTHERVAR), name='quantity_data')
         SaltSeq = keras.layers.LSTM(
             32, activation='relu', name='salt_seq',
             return_sequences=False, return_state=False)(SaltData)
@@ -199,7 +199,7 @@ def createmodel(path, nummodels):
 
         # The outputs are finally fed into an output layer that relates LSTM
         # outputs to predicted salt concentrations.
-        SaltPred = keras.layers.Dense(12, name='salt_pred')(pattern)
+        SaltPred = keras.layers.Dense(N_PRED, name='salt_pred')(pattern)
         model = keras.Model(inputs=(SaltData, QtyData), outputs=SaltPred)
 
         # Set the criteria for model optimization: algorithm, metric and
@@ -332,7 +332,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         (len(models), nfuture, data.shape[0]-nfuture-N_PAST, len(saltvars)))
     forecast_real.fill(np.nan)
 
-    # We have 12 features with chloride concentrations and 11 features with
+    # We have N_PRED features with chloride concentrations and N_OTHERVAR features with
     # other variables (here called quantity or qty variables). These must be
     # treated differently in the model and are therefore split into two
     # separate tensors.
