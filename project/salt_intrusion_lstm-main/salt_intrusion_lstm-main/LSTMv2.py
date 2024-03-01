@@ -121,15 +121,15 @@ test_scaled = pd.DataFrame(test_scaled, index=dates[split:], columns=vars_)
 # Salt data of the next day form the output dataset on which we train the
 # model.
 
-salt_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST, 12))
-salt_in.fill(np.nan)
+Qvar_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST, 12))
+Qvar_in.fill(np.nan)
 qty_in = np.empty((train_scaled.shape[0]-N_PAST, N_PAST+1, 11))
 qty_in.fill(np.nan)
 train_out = np.empty((train_scaled.shape[0]-N_PAST, 12))
 train_out.fill(np.nan)
 
 for i in range(N_PAST, train_scaled.shape[0]):
-    salt_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[0:12]][i-N_PAST:i])
+    Qvar_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[0:12]][i-N_PAST:i])
     qty_in[i-N_PAST, :, :] = np.array(train_scaled[vars_[12:23]][i-N_PAST:i+1])
     train_out[i-N_PAST, :] = np.array(train_scaled.iloc[i, 0:12])
 
@@ -230,7 +230,7 @@ def createmodel(path, nummodels):
         # In each epoch, all instances of SaltData and QtyData are used to
         # predict the values in train_out, in batches of size 'batch_size'.
         # The last 30% of the training dataset is kept separate for validation.
-        history = model.fit((salt_in, qty_in), train_out,
+        history = model.fit((Qvar_in, qty_in), train_out,
                             epochs=500, batch_size=64, validation_split=0.3,
                             verbose=2, callbacks=callback, shuffle=False)
 
@@ -342,19 +342,19 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
 
     for m in range(NUMMODELS):
         model = models[m]
-        salt_in = np.empty(
+        Qvar_in = np.empty(
             (data.shape[0]-N_PAST-nfuture, N_PAST, len(saltvars)))
-        salt_in.fill(np.nan)
+        Qvar_in.fill(np.nan)
         qty_in = np.empty(
             (data.shape[0]-N_PAST-nfuture, N_PAST+1, len(qtyvars)))
         qty_in.fill(np.nan)
 
         for i in range(N_PAST, data.shape[0]-nfuture):
-            salt_in[i-N_PAST, :, :] = np.array(data[saltvars][i-N_PAST:i])
+            Qvar_in[i-N_PAST, :, :] = np.array(data[saltvars][i-N_PAST:i])
             qty_in[i-N_PAST, :, :] = np.array(data[qtyvars][i-N_PAST:i+1])
 
         # Create a one day ahead forecast
-        forecast[m, 0, :, :] = model.predict([salt_in, qty_in])
+        forecast[m, 0, :, :] = model.predict([Qvar_in, qty_in])
         # Backtransform the forecast from normalized scores to real
         # concentrations.
         forecast_copies = np.hstack(
@@ -362,7 +362,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         forecast_real[m, 0, :, :] = scaler.inverse_transform(
             forecast_copies)[:, 0:12]
 
-        # We create a new salt_in dataset by taking all but the first
+        # We create a new Qvar_in dataset by taking all but the first
         # observation used for that issue time. Then append the forecast we
         # just made to this observation sequence. We repeat this procedure
         # until we have reached the desired forecasting horizon given by
@@ -372,11 +372,11 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
 
         for j in range(1, nfuture):
             for i in range(N_PAST, data.shape[0]-nfuture):
-                salt_in[i-N_PAST, :, :] = np.vstack(
-                    (salt_in[i-N_PAST, 1:, :], forecast[m, j-1, i-N_PAST, :]))
+                Qvar_in[i-N_PAST, :, :] = np.vstack(
+                    (Qvar_in[i-N_PAST, 1:, :], forecast[m, j-1, i-N_PAST, :]))
                 qty_in[i-N_PAST, :, :] = np.array(
                     data[qtyvars][i-N_PAST+j:i+j+1])
-            forecast[m, j, :, :] = model.predict([salt_in, qty_in])
+            forecast[m, j, :, :] = model.predict([Qvar_in, qty_in])
             forecast_copies = np.hstack(
                 [forecast[m, j, :, :], forecast[m, j, :, 1:]])
             forecast_real[m, j, :, :] = scaler.inverse_transform(
