@@ -168,7 +168,7 @@ def createmodel(path, nummodels):
         SaltData = keras.Input(shape=(N_PAST, N_PRED), name='salt_data')
         QtyData = keras.Input(shape=(N_PAST+1, N_OTHERVAR), name='quantity_data')
         SaltSeq = keras.layers.LSTM(
-            32, activation='relu', name='salt_seq',
+            64, activation='relu', name='salt_seq',
             return_sequences=False, return_state=False)(SaltData)
 
         # Input data are fed into an LSTM layer with relu activation. Relu
@@ -180,7 +180,7 @@ def createmodel(path, nummodels):
         # TODO: consider using the built-in dropout of the LSTM layer. #######
 
         SaltSeq2 = keras.layers.Dropout(0.3, name='salt_seq_2')(SaltSeq)
-        QtySeq = keras.layers.LSTM(32, activation='relu', name='qty_seq',
+        QtySeq = keras.layers.LSTM(64, activation='relu', name='qty_seq',
                                    return_sequences=False, return_state=False
                                    )(QtyData)
         QtySeq2 = keras.layers.Dropout(0.3, name='qty_seq_2')(QtySeq)
@@ -213,8 +213,7 @@ def createmodel(path, nummodels):
         # See: Kingma & Ba, 2017. Adam: a mehthod for stochastic optimization.
         # https://arxiv.org/pdf/1412.6980.pdf
 
-        model.compile(optimizer='adam', loss='mse',
-                      loss_weights=[2, 3, 3, 1, 2, 1, 1, 1, 1, 1, 1, 1])
+        model.compile(optimizer='adam', loss='mse')
         tf.keras.utils.plot_model(model, show_shapes=True)
 
         # Set the number of iterations without improvement to the validation
@@ -339,7 +338,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
     # For the salt data, the input consists of measurements of the N_PAST
     # preceding days. For the quantity data, we also include the measurement of
     # the next day, as a proxy for a forecast.
-
+    print("hi")
     for m in range(NUMMODELS):
         model = models[m]
         Qvar_in = np.empty(
@@ -360,7 +359,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         forecast_copies = np.hstack(
             [forecast[m, 0, :, :], forecast[m, 0, :, 1:]])
         forecast_real[m, 0, :, :] = scaler.inverse_transform(
-            forecast_copies)[:, 0:12]
+            forecast_copies)[:, 0:N_PRED]
 
         # We create a new Qvar_in dataset by taking all but the first
         # observation used for that issue time. Then append the forecast we
@@ -380,14 +379,14 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
             forecast_copies = np.hstack(
                 [forecast[m, j, :, :], forecast[m, j, :, 1:]])
             forecast_real[m, j, :, :] = scaler.inverse_transform(
-                forecast_copies)[:, 0:12]
+                forecast_copies)[:, 0:N_PRED]
 
     return forecast, forecast_real
 
 
 # make an ensemble forecast for the training dataset
 forecast, forecast_real = ensemble_forecast(
-    models, train_scaled, N_FUTURE, vars_[0:12], vars_[12:23])
+    models, train_scaled, N_FUTURE, vars_[0:N_PRED], vars_[N_PRED:N_PRED+N_OTHERVAR])
 
 # %% Set up an alternative model to compare skill
 

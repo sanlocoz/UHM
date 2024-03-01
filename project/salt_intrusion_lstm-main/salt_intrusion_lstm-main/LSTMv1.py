@@ -33,7 +33,7 @@ TEST = True
 
 # Enter 'File' to reload a saved model suite or
 # 'New' to recalculate and save models.
-SOURCE = 'File'
+SOURCE = 'New'
 
 # Set the location to save the models to. Must contain a format placeholder.
 # Default = '.\\Models2\\LSTM_{}'
@@ -46,7 +46,7 @@ FIGPATH = ('D:\\Wageningen\\Period 4\\Part 2\\project\\salt_intrusion_lstm-main\
 WD = ('D:\\Wageningen\\Period 4\\Part 2\\project\\salt_intrusion_lstm-main\\salt_intrusion_lstm-main\\')
 
 SAVEFIGS = True  # True if figures should be saved
-NUMMODELS = 15  # number of models in the ensemble
+NUMMODELS = 1  # number of models in the ensemble
 N_PAST = 5  # number of days in the past used to make a prediction
 N_FUTURE = 7  # number of days in the future for which to make a prediction
 
