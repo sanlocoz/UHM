@@ -18,6 +18,7 @@ from matplotlib import pyplot as plt
 import sklearn.preprocessing
 from datetime import datetime
 import random
+import pdb
 
 # Fix the random seed to ensure reproducible results.
 np.random.seed(1)
@@ -350,6 +351,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         forecast[m, 0, :, :] = model.predict([salt_in, qty_in])
         # Backtransform the forecast from normalized scores to real
         # concentrations.
+        pdb.set_trace()
         forecast_copies = np.hstack(
             [forecast[m, 0, :, :], forecast[m, 0, :, 1:]])
         forecast_real[m, 0, :, :] = scaler.inverse_transform(

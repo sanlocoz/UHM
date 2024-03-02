@@ -18,6 +18,7 @@ from matplotlib import pyplot as plt
 import sklearn.preprocessing
 from datetime import datetime
 import random
+import pdb
 
 # Fix the random seed to ensure reproducible results.
 np.random.seed(1)
@@ -230,7 +231,7 @@ def createmodel(path, nummodels):
         # predict the values in train_out, in batches of size 'batch_size'.
         # The last 30% of the training dataset is kept separate for validation.
         history = model.fit((Qvar_in, qty_in), train_out,
-                            epochs=500, batch_size=64, validation_split=0.3,
+                            epochs=5, batch_size=64, validation_split=0.3,
                             verbose=2, callbacks=callback, shuffle=False)
 
         plt.figure()
@@ -338,7 +339,6 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
     # For the salt data, the input consists of measurements of the N_PAST
     # preceding days. For the quantity data, we also include the measurement of
     # the next day, as a proxy for a forecast.
-    print("hi")
     for m in range(NUMMODELS):
         model = models[m]
         Qvar_in = np.empty(
@@ -357,7 +357,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         # Backtransform the forecast from normalized scores to real
         # concentrations.
         forecast_copies = np.hstack(
-            [forecast[m, 0, :, :], forecast[m, 0, :, 1:]])
+            [forecast[m, 0, :, :], forecast[m, 0, :, 0:N_OTHERVAR]])
         forecast_real[m, 0, :, :] = scaler.inverse_transform(
             forecast_copies)[:, 0:N_PRED]
 
@@ -368,7 +368,6 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         # nfuture. We hereby shift the window of observations one day at the
         # time, with the last value being the result of the previous
         # forecasting step.
-
         for j in range(1, nfuture):
             for i in range(N_PAST, data.shape[0]-nfuture):
                 Qvar_in[i-N_PAST, :, :] = np.vstack(
@@ -377,7 +376,7 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
                     data[qtyvars][i-N_PAST+j:i+j+1])
             forecast[m, j, :, :] = model.predict([Qvar_in, qty_in])
             forecast_copies = np.hstack(
-                [forecast[m, j, :, :], forecast[m, j, :, 1:]])
+                [forecast[m, j, :, :], forecast[m, j, :, 0:N_OTHERVAR]])
             forecast_real[m, j, :, :] = scaler.inverse_transform(
                 forecast_copies)[:, 0:N_PRED]
 
