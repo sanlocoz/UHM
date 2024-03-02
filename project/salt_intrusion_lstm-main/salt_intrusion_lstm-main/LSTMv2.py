@@ -34,7 +34,7 @@ TEST = True
 
 # Enter 'File' to reload a saved model suite or
 # 'New' to recalculate and save models.
-SOURCE = 'New'
+SOURCE = 'File'
 
 # Set the location to save the models to. Must contain a format placeholder.
 # Default = '.\\Models2\\LSTM_{}'
@@ -47,9 +47,9 @@ FIGPATH = ('D:\\Wageningen\\Period 4\\Part 2\\project\\salt_intrusion_lstm-main\
 WD = ('D:\\Wageningen\\Period 4\\Part 2\\project\\salt_intrusion_lstm-main\\salt_intrusion_lstm-main\\')
 
 SAVEFIGS = True  # True if figures should be saved
-NUMMODELS = 1  # number of models in the ensemble
+NUMMODELS = 3  # number of models in the ensemble
 N_PAST = 5  # number of days in the past used to make a prediction
-N_FUTURE = 7  # number of days in the future for which to make a prediction
+N_FUTURE = 3  # number of days in the future for which to make a prediction
 N_PRED = 30
 N_OTHERVAR = 14
 N_LSTM = 64
@@ -428,268 +428,214 @@ persistence_model = build_persistence_model(N_PAST, N_FUTURE, train, 1)
 
 
 # %% Plot forecasts and fits
+# forecast reals contains MODEL, LEAD TIME, TRAIN - FUTURE - PAST, VARIABLES THAT IS PREDICTED)
+
+NUMTOPLOT = int(3*30*24/3) #3 MONTH
+LEADTIME = [0,0,0]
+SCALES = [1,16,2880]
+VARPLOT = 'QdN'
+
+namearea = "Pampus-Blokkerhoek" if VARPLOT[2] == "P" else "Noorderwagenplein"
+drainagetype = "Rain" if VARPLOT[1]=="r" else "Drain"
 
 forecast_fig, forecast_axs = plt.subplots(3, 2, figsize=(10, 10),
                                           sharex=False, sharey=False)
-forecast_1 = forecast_axs[0, 0]
-forecast_4 = forecast_axs[1, 0]
-forecast_7 = forecast_axs[2, 0]
 
-# Calculate the upper and lower bound and median of predicted values
-lowbound1 = np.amin(forecast_real[:, 0, :365, 1], axis=0)
-highbound1 = np.amax(forecast_real[:, 0, :365, 1], axis=0)
-medianval1 = np.median(forecast_real[:, 0, :365, 1], axis=0)
 
+for i in range(len(SCALES)):
+    VARTOPLOT = VARPLOT + str(SCALES[i])
+    
+    indexToPlot = list(vars_).index(VARTOPLOT)
+    forecast = forecast_axs[i, 0]
+    # Calculate the upper and lower bound and median of predicted values
+    lowbound1 = np.amin(forecast_real[:, LEADTIME[i], : NUMTOPLOT, indexToPlot], axis=0)
+    highbound1 = np.amax(forecast_real[:, LEADTIME[i], : NUMTOPLOT, indexToPlot], axis=0)
+    medianval1 = np.median(forecast_real[:,LEADTIME[i], : NUMTOPLOT, indexToPlot], axis=0)
+    ylim = max(highbound1*1.2)
 # Plot predicted and observed values in the first year of the training dataset
 # for lead time 1.
-forecast_1.fill_between(train.index[N_PAST:N_PAST+365], lowbound1, highbound1,
-                        label='predicted', color='pink')
-forecast_1.plot(train.index[N_PAST:N_PAST+365], medianval1,
-                label='predicted', linestyle="-", lw=0.5, color='red')
-forecast_1.plot(train.index, train.ClKr400Mean,
-                label='observed', linestyle="-", lw=0.5, color='blue')
-forecast_1.set_xlim(datetime(2011, 1, 1, 0, 0, 0),
-                    datetime(2012, 1, 1, 0, 0, 0))
-forecast_1.set_xticks(ticks=[datetime(2011, 1, 1, 0, 0, 0),
-                             datetime(2011, 4, 1, 0, 0, 0),
-                             datetime(2011, 7, 1, 0, 0, 0),
-                             datetime(2011, 10, 1, 0, 0, 0)], labels=[])
-forecast_1.set_ylim(0, 1500)
-forecast_1.set_ylabel('[Cl] (mg/L)')
-forecast_1.set(title='Forecast (2011)')
-forecast_1.annotate('(a) t+1', (datetime(2011, 1, 10, 0, 0, 0), 1400))
-forecast_1.legend(['predicted range', 'predicted median', 'observed'],
-                  loc=(0.05, 0.65), frameon=False)
+    forecast.fill_between(train.index[N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT], lowbound1, highbound1,
+                            label='predicted', color='pink')
+    forecast.plot(train.index[N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT], medianval1,
+                    label='predicted', linestyle="-", lw=0.5, color='red')
+    forecast.plot(train.index[N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT], train[VARTOPLOT][N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT],
+                    label='observed', linestyle="-", lw=0.5, color='blue')
+    forecast.set_xlim(datetime(1974, 1, 1, 0, 0, 0),
+                        datetime(1974, 3, 1, 0, 0, 0))
+    forecast.set_xticks(ticks=[datetime(1974, 1, 1, 0, 0, 0),
+                               datetime(1974, 2, 1, 0, 0, 0),datetime(1974, 3, 1, 0, 0, 0),
+                              ],labels=[])
+    forecast.set_ylim(0, ylim)
+    forecast.set_ylabel("Q"+str(SCALES[i]) + " (mm)")
+    forecast.annotate('(a) t+1', (datetime(1974, 1, 10, 0, 0, 0), 1400))
+    if(i == 0):
+        forecast.set(title='Forecast (1974)')
+        forecast.legend(['predicted range', 'predicted median', 'observed'],
+                      loc=(0.05, 0.65), frameon=False)
+    
+    if(i == len(SCALES)-1):
+        forecast.set_xticks(ticks=[datetime(1974, 1, 1, 0, 0, 0),
+                                      datetime(1974, 2, 1, 0, 0, 0),
+                                      datetime(1974, 3, 1, 0, 0, 0)], labels=["Jan", "Feb", "Mar"])
+        forecast.set_xlabel(1974)
+    
+    fit = forecast_axs[i, 1]
 
-# Repeat procedure for lead times 4 and 7.
-lowbound4 = np.amin(forecast_real[:, 3, :365, 1], axis=0)
-highbound4 = np.amax(forecast_real[:, 3, :365, 1], axis=0)
-medianval4 = np.median(forecast_real[:, 3, :365, 1], axis=0)
+    for m in range(NUMMODELS):
+        fit.plot(train[VARTOPLOT][N_PAST+LEADTIME[i]:-N_FUTURE+LEADTIME[i]], forecast_real[m, LEADTIME[i], :, indexToPlot],
+                    marker=',', color='red', linestyle="")
+    fit.plot([0, 2000], [0, 2000], color='black',)
+    fit.set_aspect('equal', 'box')
+    fit.set_xlim(0, ylim)
+    fit.set_ylim(0, ylim)
+    fit.set_ylabel("Q"+str(SCALES[i])+" predicted (mm)")
+    fit.annotate('(b) t+1', (100, 1400))
+    
+    if(i==0):
+        fit.set_title('Fit (1973-1979)')
+        
+    if(i==len(SCALES)-1):
+        fit.set_xlabel("Q observed (mm)")
+        
+forecast_fig.suptitle('Forecast of ' + namearea + " " + drainagetype + ' Discharge (' + VARPLOT + ', training)')
 
-forecast_4.fill_between(train.index[N_PAST+3:N_PAST+3+365],
-                        lowbound4, highbound4,
-                        label='predicted', color='pink')
-forecast_4.plot(train.index[N_PAST+3:N_PAST+3+365], medianval4,
-                label='predicted', linestyle="-", lw=0.5, color='red')
-forecast_4.plot(train.index, train.ClKr400Mean,
-                label='observed', linestyle="-", lw=0.5, color='blue')
-forecast_4.set_xlim(datetime(2011, 1, 1, 0, 0, 0),
-                    datetime(2012, 1, 1, 0, 0, 0))
-forecast_4.set_xticks(ticks=[datetime(2011, 1, 1, 0, 0, 0),
-                             datetime(2011, 4, 1, 0, 0, 0),
-                             datetime(2011, 7, 1, 0, 0, 0),
-                             datetime(2011, 10, 1, 0, 0, 0)], labels=[])
-forecast_4.set_ylim(0, 1500)
-forecast_4.set_ylabel('[Cl] (mg/L)')
-forecast_4.annotate('(c) t+4', (datetime(2011, 1, 10, 0, 0, 0), 1400))
-
-lowbound7 = np.amin(forecast_real[:, 6, :365, 1], axis=0)
-highbound7 = np.amax(forecast_real[:, 6, :365, 1], axis=0)
-medianval7 = np.median(forecast_real[:, 6, :365, 1], axis=0)
-
-forecast_7.fill_between(train.index[N_PAST+6:N_PAST+6+365],
-                        lowbound7, highbound7, label='predicted', color='pink')
-forecast_7.plot(train.index[N_PAST+6:N_PAST+6+365], medianval7,
-                label='predicted', linestyle="-", lw=0.5, color='red')
-forecast_7.plot(train.index, train.ClKr400Mean,
-                label='observed', linestyle="-", lw=0.5, color='blue')
-forecast_7.set_xlim(datetime(2011, 1, 1, 0, 0, 0),
-                    datetime(2012, 1, 1, 0, 0, 0))
-forecast_7.set_xticks(ticks=[datetime(2011, 1, 3, 0, 0, 0),
-                             datetime(2011, 4, 1, 0, 0, 0),
-                             datetime(2011, 7, 1, 0, 0, 0),
-                             datetime(2011, 10, 1, 0, 0, 0)],
-                      labels=['Jan', 'Apr', 'Jul', 'Oct'])
-forecast_7.set_ylim(0, 1500)
-forecast_7.set_xlabel(2011)
-forecast_7.set_ylabel('[Cl] (mg/L)')
-forecast_7.annotate('(e) t+7', (datetime(2011, 1, 10, 0, 0, 0), 1400))
-
-# Plot predicted values against observed values.
-fit_1 = forecast_axs[0, 1]
-fit_4 = forecast_axs[1, 1]
-fit_7 = forecast_axs[2, 1]
-
-for m in range(NUMMODELS):
-    fit_1.plot(train.ClKr400Mean[N_PAST:-N_FUTURE], forecast_real[m, 0, :, 1],
-               marker=',', color='red', linestyle="")
-fit_1.plot([0, 2000], [0, 2000], color='black',)
-fit_1.set_aspect('equal', 'box')
-fit_1.set_xlim(0, 1500)
-fit_1.set_ylim(0, 1500)
-fit_1.set_ylabel('[Cl] (mg/L) predicted')
-fit_1.set_title('Fit (2011-2017)')
-fit_1.annotate('(b) t+1', (100, 1400))
-fit_1.set_xticks(ticks=[0, 500, 1000, 1500], labels=[])
-fit_1.set_yticks(ticks=[0, 500, 1000, 1500])
-
-for m in range(NUMMODELS):
-    fit_4.plot(train.ClKr400Mean[N_PAST+3:-N_FUTURE+3],
-               forecast_real[m, 3, :, 1],
-               marker=',', color='red', linestyle="")
-fit_4.plot([0, 2000], [0, 2000], color='black')
-fit_4.set_aspect('equal', 'box')
-fit_4.set_xlim(0, 1500)
-fit_4.set_ylim(0, 1500)
-fit_4.set_ylabel('[Cl] (mg/L) predicted')
-fit_4.annotate('(d) t+4', (100, 1400))
-fit_4.set_xticks(ticks=[0, 500, 1000, 1500], labels=[])
-fit_4.set_yticks(ticks=[0, 500, 1000, 1500])
-
-for m in range(NUMMODELS):
-    fit_7.plot(train.ClKr400Mean[N_PAST+6:-N_FUTURE+6],
-               forecast_real[m, 6, :, 1],
-               marker=',', color='red', linestyle="")
-fit_7.plot([0, 2000], [0, 2000], color='black')
-fit_7.set_aspect('equal', 'box')
-fit_7.set_xlim(0, 1500)
-fit_7.set_ylim(0, 1500)
-fit_7.set_xlabel('[Cl] (mg/l) observed')
-fit_7.set_ylabel('[Cl] (mg/L) predicted')
-fit_7.annotate('(f) t+7', (100, 1400))
-fit_7.set_xticks(ticks=[0, 500, 1000, 1500])
-fit_7.set_yticks(ticks=[0, 500, 1000, 1500])
-
-forecast_fig.suptitle('Forecast of mean [Cl] at Krimpen aan de IJssel, '
-                      'depth=-4.0 m a.m.s.l.\n (training)')
-
-if SAVEFIGS is True:
-    forecast_fig.savefig(FIGPATH+'Forecast_2011_train.png')
-    forecast_fig.savefig(FIGPATH+'Forecast_2011_train.pdf')
-
+# if SAVEFIGS is True:
+#     forecast_fig.savefig(FIGPATH+'Forecast_2011_train.png')
+#     forecast_fig.savefig(FIGPATH+'Forecast_2011_train.pdf')
+    
 
 # %% Compute metrics
 
-RMSE = np.empty((N_FUTURE, NUMMODELS))
-RMSE.fill(np.nan)
-Accuracy = np.empty((N_FUTURE, NUMMODELS))
-Accuracy.fill(np.nan)
-Precision = np.empty((N_FUTURE, NUMMODELS))
-Precision.fill(np.nan)
-Recall = np.empty((N_FUTURE, NUMMODELS))
-Recall.fill(np.nan)
+# RMSE = np.empty((N_FUTURE, NUMMODELS))
+# RMSE.fill(np.nan)
+# Accuracy = np.empty((N_FUTURE, NUMMODELS))
+# Accuracy.fill(np.nan)
+# Precision = np.empty((N_FUTURE, NUMMODELS))
+# Precision.fill(np.nan)
+# Recall = np.empty((N_FUTURE, NUMMODELS))
+# Recall.fill(np.nan)
 
-RMSE_persistence = np.empty(N_FUTURE)
-RMSE_persistence.fill(np.nan)
-Accuracy_persistence = np.empty(N_FUTURE)
-Accuracy_persistence.fill(np.nan)
-Precision_persistence = np.empty(N_FUTURE)
-Precision_persistence.fill(np.nan)
-Recall_persistence = np.empty(N_FUTURE)
-Recall_persistence.fill(np.nan)
+# RMSE_persistence = np.empty(N_FUTURE)
+# RMSE_persistence.fill(np.nan)
+# Accuracy_persistence = np.empty(N_FUTURE)
+# Accuracy_persistence.fill(np.nan)
+# Precision_persistence = np.empty(N_FUTURE)
+# Precision_persistence.fill(np.nan)
+# Recall_persistence = np.empty(N_FUTURE)
+# Recall_persistence.fill(np.nan)
 
-# Calculate Root mean squared error for persistence model vs. observations
-RMSE_persistence[0] = math.sqrt(np.square(np.subtract(
-    train.ClKr400Mean[N_PAST:-N_FUTURE], persistence_model[0, :])).mean())
+# # Calculate Root mean squared error for persistence model vs. observations
+# RMSE_persistence[0] = math.sqrt(np.square(np.subtract(
+#     train.ClKr400Mean[N_PAST:-N_FUTURE], persistence_model[0, :])).mean())
 
-# Define an event as a day where mean chloride concentrations exceeded a
-# threshold level.
-# Define a warning as a day where the model predicts exceedence of the
-# threshold level.
+# # Define an event as a day where mean chloride concentrations exceeded a
+# # threshold level.
+# # Define a warning as a day where the model predicts exceedence of the
+# # threshold level.
 
-event = train.ClKr400Mean[N_PAST:-N_FUTURE] > THRESHOLD
-warning_persistence = persistence_model[0, :] > THRESHOLD
+# event = train.ClKr400Mean[N_PAST:-N_FUTURE] > THRESHOLD
+# warning_persistence = persistence_model[0, :] > THRESHOLD
 
-# Calculate accuracy, precision and recall for the persistence model.
-Accuracy_persistence[0] = (
-    sum(np.logical_and(event, warning_persistence))
-    + sum(np.logical_and(np.logical_not(event),
-                         np.logical_not(warning_persistence)))
-    )/(forecast.shape[2])
-Precision_persistence[0] = sum(np.logical_and(event, warning_persistence)
-                               )/sum(warning_persistence)
-Recall_persistence[0] = sum(np.logical_and(event, warning_persistence)
-                            )/sum(event)
+# # Calculate accuracy, precision and recall for the persistence model.
+# Accuracy_persistence[0] = (
+#     sum(np.logical_and(event, warning_persistence))
+#     + sum(np.logical_and(np.logical_not(event),
+#                           np.logical_not(warning_persistence)))
+#     )/(forecast.shape[2])
+# Precision_persistence[0] = sum(np.logical_and(event, warning_persistence)
+#                                 )/sum(warning_persistence)
+# Recall_persistence[0] = sum(np.logical_and(event, warning_persistence)
+#                             )/sum(event)
 
-# Calculate RMSE, accuracy, precision and recall for the persistence model.
-for m in range(NUMMODELS):
-    RMSE[0, m] = math.sqrt(np.square(np.subtract(
-            train.ClKr400Mean[N_PAST:-N_FUTURE], forecast_real[m, 0, :, 1])
-        ).mean())
-    warning_LSTM = forecast_real[m, 0, :, 1] > THRESHOLD
-    Accuracy[0, m] = (
-        sum(np.logical_and(event, warning_LSTM))
-        + sum(np.logical_and(np.logical_not(event),
-                             np.logical_not(warning_LSTM)))
-        )/(forecast.shape[2])
-    Precision[0, m] = sum(np.logical_and(event, warning_LSTM)
-                          )/sum(warning_LSTM)
-    Recall[0, m] = sum(np.logical_and(event, warning_LSTM))/sum(event)
+# # Calculate RMSE, accuracy, precision and recall for the persistence model.
+# for m in range(NUMMODELS):
+#     RMSE[0, m] = math.sqrt(np.square(np.subtract(
+#             train.ClKr400Mean[N_PAST:-N_FUTURE], forecast_real[m, 0, :, 1])
+#         ).mean())
+#     warning_LSTM = forecast_real[m, 0, :, 1] > THRESHOLD
+#     Accuracy[0, m] = (
+#         sum(np.logical_and(event, warning_LSTM))
+#         + sum(np.logical_and(np.logical_not(event),
+#                               np.logical_not(warning_LSTM)))
+#         )/(forecast.shape[2])
+#     Precision[0, m] = sum(np.logical_and(event, warning_LSTM)
+#                           )/sum(warning_LSTM)
+#     Recall[0, m] = sum(np.logical_and(event, warning_LSTM))/sum(event)
 
-# Repeat procedure for each of the lead times.
-for j in range(1, N_FUTURE):
-    event = train.ClKr400Mean[N_PAST+j:-N_FUTURE+j] > THRESHOLD
-    warning_persistence = persistence_model[j, :] > THRESHOLD
-    RMSE_persistence[j] = math.sqrt(np.square(np.subtract(
-        train.ClKr400Mean[N_PAST+j:-N_FUTURE+j], persistence_model[j, :])
-        ).mean())
-    Accuracy_persistence[j] = (
-        sum(np.logical_and(event, warning_persistence))
-        + sum(np.logical_and(np.logical_not(event),
-                             np.logical_not(warning_persistence)))
-        )/(forecast.shape[2])
-    Precision_persistence[j] = sum(np.logical_and(
-        event, warning_persistence))/sum(warning_persistence)
-    Recall_persistence[j] = sum(np.logical_and(
-        event, warning_persistence))/sum(event)
+# # Repeat procedure for each of the lead times.
+# for j in range(1, N_FUTURE):
+#     event = train.ClKr400Mean[N_PAST+j:-N_FUTURE+j] > THRESHOLD
+#     warning_persistence = persistence_model[j, :] > THRESHOLD
+#     RMSE_persistence[j] = math.sqrt(np.square(np.subtract(
+#         train.ClKr400Mean[N_PAST+j:-N_FUTURE+j], persistence_model[j, :])
+#         ).mean())
+#     Accuracy_persistence[j] = (
+#         sum(np.logical_and(event, warning_persistence))
+#         + sum(np.logical_and(np.logical_not(event),
+#                               np.logical_not(warning_persistence)))
+#         )/(forecast.shape[2])
+#     Precision_persistence[j] = sum(np.logical_and(
+#         event, warning_persistence))/sum(warning_persistence)
+#     Recall_persistence[j] = sum(np.logical_and(
+#         event, warning_persistence))/sum(event)
 
-    for m in range(NUMMODELS):
-        RMSE[j, m] = math.sqrt(np.square(np.subtract(
-            train.ClKr400Mean[N_PAST+j:-N_FUTURE+j],
-            forecast_real[m, j, :, 1])).mean())
-        warning_LSTM = forecast_real[m, j, :, 1] > THRESHOLD
-        Accuracy[j, m] = (
-            sum(np.logical_and(event, warning_LSTM))
-            + sum(np.logical_and(np.logical_not(event),
-                                 np.logical_not(warning_LSTM)))
-            )/(forecast.shape[2])
-        Precision[j, m] = sum(np.logical_and(
-            event, warning_LSTM))/sum(warning_LSTM)
-        Recall[j, m] = sum(np.logical_and(event, warning_LSTM))/sum(event)
+#     for m in range(NUMMODELS):
+#         RMSE[j, m] = math.sqrt(np.square(np.subtract(
+#             train.ClKr400Mean[N_PAST+j:-N_FUTURE+j],
+#             forecast_real[m, j, :, 1])).mean())
+#         warning_LSTM = forecast_real[m, j, :, 1] > THRESHOLD
+#         Accuracy[j, m] = (
+#             sum(np.logical_and(event, warning_LSTM))
+#             + sum(np.logical_and(np.logical_not(event),
+#                                   np.logical_not(warning_LSTM)))
+#             )/(forecast.shape[2])
+#         Precision[j, m] = sum(np.logical_and(
+#             event, warning_LSTM))/sum(warning_LSTM)
+#         Recall[j, m] = sum(np.logical_and(event, warning_LSTM))/sum(event)
 
 
-# %% Plot metrics
-metrics_fig, metrics_axs = plt.subplots(
-    1, 3, figsize=(10, 3), sharex=False, sharey=False)
-metrics_fig.tight_layout(pad=2)
-RMSE_plot = metrics_axs[0]
-Precision_plot = metrics_axs[1]
-Recall_plot = metrics_axs[2]
+# # %% Plot metrics
+# metrics_fig, metrics_axs = plt.subplots(
+#     1, 3, figsize=(10, 3), sharex=False, sharey=False)
+# metrics_fig.tight_layout(pad=2)
+# RMSE_plot = metrics_axs[0]
+# Precision_plot = metrics_axs[1]
+# Recall_plot = metrics_axs[2]
 
-for m in range(NUMMODELS):
-    RMSE_plot.plot(range(1, 8), RMSE[:, m], color='red', lw=0.5, label='LSTM')
-RMSE_plot.plot(range(1, 8), RMSE_persistence,
-               color='cyan', lw=1.5, label='Persistence')
-RMSE_plot.set_ylabel('RMSE [mg/l]')
-RMSE_plot.set_xticks(ticks=range(1, 8))
-RMSE_plot.annotate('(a)', (1, 70))
+# for m in range(NUMMODELS):
+#     RMSE_plot.plot(range(1, 8), RMSE[:, m], color='red', lw=0.5, label='LSTM')
+# RMSE_plot.plot(range(1, 8), RMSE_persistence,
+#                color='cyan', lw=1.5, label='Persistence')
+# RMSE_plot.set_ylabel('RMSE [mg/l]')
+# RMSE_plot.set_xticks(ticks=range(1, 8))
+# RMSE_plot.annotate('(a)', (1, 70))
 
-for m in range(NUMMODELS):
-    Precision_plot.plot(
-        range(1, 8), Precision[:, m], color='red', lw=0.5, label='LSTM')
-Precision_plot.plot(range(1, 8), Precision_persistence,
-                    color='cyan', lw=1.5, label='Persistence')
-Precision_plot.set_xlabel('lead time (days)')
-Precision_plot.set_ylabel('Precision')
-Precision_plot.set_xticks(ticks=range(1, 8))
-Precision_plot.set_ylim(0, 1)
-Precision_plot.annotate('(b)', (1, 0.9))
+# for m in range(NUMMODELS):
+#     Precision_plot.plot(
+#         range(1, 8), Precision[:, m], color='red', lw=0.5, label='LSTM')
+# Precision_plot.plot(range(1, 8), Precision_persistence,
+#                     color='cyan', lw=1.5, label='Persistence')
+# Precision_plot.set_xlabel('lead time (days)')
+# Precision_plot.set_ylabel('Precision')
+# Precision_plot.set_xticks(ticks=range(1, 8))
+# Precision_plot.set_ylim(0, 1)
+# Precision_plot.annotate('(b)', (1, 0.9))
 
-for m in range(NUMMODELS):
-    Recall_plot.plot(
-        range(1, 8), Recall[:, m], color='red', lw=0.5, label='LSTM')
-Recall_plot.plot(range(1, 8), Recall_persistence,
-                 color='cyan', lw=1.5, label='reference (persistence)')
-Recall_plot.set_ylabel('Recall')
-Recall_plot.set_xticks(ticks=range(1, 8))
-Recall_plot.set_ylim(0, 1)
-Recall_plot.annotate('(c)', (1, 0.9))
-plt.legend(Recall_plot.get_legend_handles_labels()[0][-2:],
-           Recall_plot.get_legend_handles_labels()[1][-2:], frameon=False)
+# for m in range(NUMMODELS):
+#     Recall_plot.plot(
+#         range(1, 8), Recall[:, m], color='red', lw=0.5, label='LSTM')
+# Recall_plot.plot(range(1, 8), Recall_persistence,
+#                  color='cyan', lw=1.5, label='reference (persistence)')
+# Recall_plot.set_ylabel('Recall')
+# Recall_plot.set_xticks(ticks=range(1, 8))
+# Recall_plot.set_ylim(0, 1)
+# Recall_plot.annotate('(c)', (1, 0.9))
+# plt.legend(Recall_plot.get_legend_handles_labels()[0][-2:],
+#            Recall_plot.get_legend_handles_labels()[1][-2:], frameon=False)
 
-if SAVEFIGS is True:
-    metrics_fig.savefig(FIGPATH+'metrics_train.png')
-    metrics_fig.savefig(FIGPATH+'metrics_train.pdf')
+# if SAVEFIGS is True:
+#     metrics_fig.savefig(FIGPATH+'metrics_train.png')
+#     metrics_fig.savefig(FIGPATH+'metrics_train.pdf')
 
 
 # %% Run the analysis on a separate test dataset
@@ -842,132 +788,132 @@ if SAVEFIGS is True:
 
 
 # %% Compute metrics (test)
-if TEST is True:
-    RMSE_test = np.empty((N_FUTURE, NUMMODELS))
-    RMSE_test.fill(np.nan)
-    Accuracy_test = np.empty((N_FUTURE, NUMMODELS))
-    Accuracy_test.fill(np.nan)
-    Precision_test = np.empty((N_FUTURE, NUMMODELS))
-    Precision_test.fill(np.nan)
-    Recall_test = np.empty((N_FUTURE, NUMMODELS))
-    Recall_test.fill(np.nan)
+# if TEST is True:
+#     RMSE_test = np.empty((N_FUTURE, NUMMODELS))
+#     RMSE_test.fill(np.nan)
+#     Accuracy_test = np.empty((N_FUTURE, NUMMODELS))
+#     Accuracy_test.fill(np.nan)
+#     Precision_test = np.empty((N_FUTURE, NUMMODELS))
+#     Precision_test.fill(np.nan)
+#     Recall_test = np.empty((N_FUTURE, NUMMODELS))
+#     Recall_test.fill(np.nan)
 
-    RMSE_persistence_test = np.empty(N_FUTURE)
-    RMSE_persistence_test.fill(np.nan)
-    Accuracy_persistence_test = np.empty(N_FUTURE)
-    Accuracy_persistence_test.fill(np.nan)
-    Precision_persistence_test = np.empty(N_FUTURE)
-    Precision_persistence_test.fill(np.nan)
-    Recall_persistence_test = np.empty(N_FUTURE)
-    Recall_persistence_test.fill(np.nan)
+#     RMSE_persistence_test = np.empty(N_FUTURE)
+#     RMSE_persistence_test.fill(np.nan)
+#     Accuracy_persistence_test = np.empty(N_FUTURE)
+#     Accuracy_persistence_test.fill(np.nan)
+#     Precision_persistence_test = np.empty(N_FUTURE)
+#     Precision_persistence_test.fill(np.nan)
+#     Recall_persistence_test = np.empty(N_FUTURE)
+#     Recall_persistence_test.fill(np.nan)
 
-    RMSE_persistence_test[0] = math.sqrt(np.square(np.subtract(
-        test.ClKr400Mean[N_PAST:-N_FUTURE],
-        persistence_model_test[0, :])).mean())
+#     RMSE_persistence_test[0] = math.sqrt(np.square(np.subtract(
+#         test.ClKr400Mean[N_PAST:-N_FUTURE],
+#         persistence_model_test[0, :])).mean())
 
-    event = test.ClKr400Mean[N_PAST:-N_FUTURE] > THRESHOLD
-    warning_persistence = persistence_model_test[0, :] > THRESHOLD
-    Accuracy_persistence_test[0] = (
-        sum(np.logical_and(event, warning_persistence))
-        + sum(np.logical_and(np.logical_not(event),
-                             np.logical_not(warning_persistence)))
-        )/(forecast_test.shape[2])
-    Precision_persistence_test[0] = sum(np.logical_and(
-        event, warning_persistence))/sum(warning_persistence)
-    Recall_persistence_test[0] = sum(np.logical_and(
-        event, warning_persistence))/sum(event)
+#     event = test.ClKr400Mean[N_PAST:-N_FUTURE] > THRESHOLD
+#     warning_persistence = persistence_model_test[0, :] > THRESHOLD
+#     Accuracy_persistence_test[0] = (
+#         sum(np.logical_and(event, warning_persistence))
+#         + sum(np.logical_and(np.logical_not(event),
+#                              np.logical_not(warning_persistence)))
+#         )/(forecast_test.shape[2])
+#     Precision_persistence_test[0] = sum(np.logical_and(
+#         event, warning_persistence))/sum(warning_persistence)
+#     Recall_persistence_test[0] = sum(np.logical_and(
+#         event, warning_persistence))/sum(event)
 
-    for m in range(NUMMODELS):
-        RMSE_test[0, m] = math.sqrt(np.square(np.subtract(
-                test.ClKr400Mean[N_PAST:-N_FUTURE],
-                forecast_real_test[m, 0, :, 1])).mean())
-        warning_LSTM = forecast_real_test[m, 0, :, 1] > THRESHOLD
-        Accuracy_test[0, m] = (
-            sum(np.logical_and(event, warning_LSTM))
-            + sum(np.logical_and(np.logical_not(event),
-                                 np.logical_not(warning_LSTM)))
-            )/(forecast.shape[2])
-        Precision_test[0, m] = sum(np.logical_and(
-            event, warning_LSTM))/sum(warning_LSTM)
-        Recall_test[0, m] = sum(np.logical_and(event, warning_LSTM))/sum(event)
+#     for m in range(NUMMODELS):
+#         RMSE_test[0, m] = math.sqrt(np.square(np.subtract(
+#                 test.ClKr400Mean[N_PAST:-N_FUTURE],
+#                 forecast_real_test[m, 0, :, 1])).mean())
+#         warning_LSTM = forecast_real_test[m, 0, :, 1] > THRESHOLD
+#         Accuracy_test[0, m] = (
+#             sum(np.logical_and(event, warning_LSTM))
+#             + sum(np.logical_and(np.logical_not(event),
+#                                  np.logical_not(warning_LSTM)))
+#             )/(forecast.shape[2])
+#         Precision_test[0, m] = sum(np.logical_and(
+#             event, warning_LSTM))/sum(warning_LSTM)
+#         Recall_test[0, m] = sum(np.logical_and(event, warning_LSTM))/sum(event)
 
-    for j in range(1, N_FUTURE):
-        event = test.ClKr400Mean[N_PAST+j:-N_FUTURE+j] > THRESHOLD
-        warning_persistence = persistence_model_test[j, :] > THRESHOLD
-        RMSE_persistence_test[j] = math.sqrt(np.square(np.subtract(
-            test.ClKr400Mean[N_PAST+j:-N_FUTURE+j],
-            persistence_model_test[j, :])).mean())
-        Accuracy_persistence_test[j] = (
-            sum(np.logical_and(event, warning_persistence))
-            + sum(np.logical_and(np.logical_not(event),
-                                 np.logical_not(warning_persistence)))
-            )/(forecast.shape[2])
-        Precision_persistence_test[j] = sum(np.logical_and(
-            event, warning_persistence))/sum(warning_persistence)
-        Recall_persistence_test[j] = sum(np.logical_and(
-            event, warning_persistence))/sum(event)
+#     for j in range(1, N_FUTURE):
+#         event = test.ClKr400Mean[N_PAST+j:-N_FUTURE+j] > THRESHOLD
+#         warning_persistence = persistence_model_test[j, :] > THRESHOLD
+#         RMSE_persistence_test[j] = math.sqrt(np.square(np.subtract(
+#             test.ClKr400Mean[N_PAST+j:-N_FUTURE+j],
+#             persistence_model_test[j, :])).mean())
+#         Accuracy_persistence_test[j] = (
+#             sum(np.logical_and(event, warning_persistence))
+#             + sum(np.logical_and(np.logical_not(event),
+#                                  np.logical_not(warning_persistence)))
+#             )/(forecast.shape[2])
+#         Precision_persistence_test[j] = sum(np.logical_and(
+#             event, warning_persistence))/sum(warning_persistence)
+#         Recall_persistence_test[j] = sum(np.logical_and(
+#             event, warning_persistence))/sum(event)
 
-        for m in range(NUMMODELS):
-            RMSE_test[j, m] = math.sqrt(np.square(np.subtract(
-                test.ClKr400Mean[N_PAST+j:-N_FUTURE+j],
-                forecast_real_test[m, j, :, 1])).mean())
-            warning_LSTM = forecast_real_test[m, j, :, 1] > THRESHOLD
-            Accuracy_test[j, m] = (
-                sum(np.logical_and(event, warning_LSTM))
-                + sum(np.logical_and(np.logical_not(event),
-                                     np.logical_not(warning_LSTM)))
-                )/(forecast.shape[2])
-            Precision_test[j, m] = sum(np.logical_and(
-                event, warning_LSTM))/sum(warning_LSTM)
-            Recall_test[j, m] = sum(np.logical_and(
-                event, warning_LSTM))/sum(event)
+#         for m in range(NUMMODELS):
+#             RMSE_test[j, m] = math.sqrt(np.square(np.subtract(
+#                 test.ClKr400Mean[N_PAST+j:-N_FUTURE+j],
+#                 forecast_real_test[m, j, :, 1])).mean())
+#             warning_LSTM = forecast_real_test[m, j, :, 1] > THRESHOLD
+#             Accuracy_test[j, m] = (
+#                 sum(np.logical_and(event, warning_LSTM))
+#                 + sum(np.logical_and(np.logical_not(event),
+#                                      np.logical_not(warning_LSTM)))
+#                 )/(forecast.shape[2])
+#             Precision_test[j, m] = sum(np.logical_and(
+#                 event, warning_LSTM))/sum(warning_LSTM)
+#             Recall_test[j, m] = sum(np.logical_and(
+#                 event, warning_LSTM))/sum(event)
 
 # %% Plot metrics (test)
 
-if TEST is True:
-    metrics_fig_test, metrics_axs_test = plt.subplots(
-        1, 3, figsize=(10, 3), sharex=False, sharey=False)
-    metrics_fig_test.tight_layout(pad=2)
-    RMSE_plot_test = metrics_axs_test[0]
-    Precision_plot_test = metrics_axs_test[1]
-    Recall_plot_test = metrics_axs_test[2]
+# if TEST is True:
+#     metrics_fig_test, metrics_axs_test = plt.subplots(
+#         1, 3, figsize=(10, 3), sharex=False, sharey=False)
+#     metrics_fig_test.tight_layout(pad=2)
+#     RMSE_plot_test = metrics_axs_test[0]
+#     Precision_plot_test = metrics_axs_test[1]
+#     Recall_plot_test = metrics_axs_test[2]
 
-    for m in range(NUMMODELS):
-        RMSE_plot_test.plot(
-            range(1, 8), RMSE_test[:, m], color='red', lw=0.5, label='LSTM')
-    RMSE_plot_test.plot(range(1, 8), RMSE_persistence_test,
-                        color='cyan', lw=1.5, label='Persistence')
-    RMSE_plot_test.set_ylabel('RMSE [mg/l]')
-    RMSE_plot_test.set_xticks(ticks=range(1, 8))
-    RMSE_plot_test.annotate('(a)', (1, 170))
+#     for m in range(NUMMODELS):
+#         RMSE_plot_test.plot(
+#             range(1, 8), RMSE_test[:, m], color='red', lw=0.5, label='LSTM')
+#     RMSE_plot_test.plot(range(1, 8), RMSE_persistence_test,
+#                         color='cyan', lw=1.5, label='Persistence')
+#     RMSE_plot_test.set_ylabel('RMSE [mg/l]')
+#     RMSE_plot_test.set_xticks(ticks=range(1, 8))
+#     RMSE_plot_test.annotate('(a)', (1, 170))
 
-    for m in range(NUMMODELS):
-        Precision_plot_test.plot(range(1, 8), Precision_test[:, m],
-                                 color='red', lw=0.5, label='LSTM')
-    Precision_plot_test.plot(range(1, 8), Precision_persistence_test,
-                             color='cyan', lw=1.5, label='Persistence')
-    Precision_plot_test.set_xlabel('lead time')
-    Precision_plot_test.set_ylabel('Precision')
-    Precision_plot_test.set_xticks(ticks=range(1, 8))
-    Precision_plot_test.set_ylim(0, 1)
-    Precision_plot_test.annotate('(b)', (1, 0.9))
+#     for m in range(NUMMODELS):
+#         Precision_plot_test.plot(range(1, 8), Precision_test[:, m],
+#                                  color='red', lw=0.5, label='LSTM')
+#     Precision_plot_test.plot(range(1, 8), Precision_persistence_test,
+#                              color='cyan', lw=1.5, label='Persistence')
+#     Precision_plot_test.set_xlabel('lead time')
+#     Precision_plot_test.set_ylabel('Precision')
+#     Precision_plot_test.set_xticks(ticks=range(1, 8))
+#     Precision_plot_test.set_ylim(0, 1)
+#     Precision_plot_test.annotate('(b)', (1, 0.9))
 
-    for m in range(NUMMODELS):
-        Recall_plot_test.plot(range(1, 8), Recall_test[:, m],
-                              color='red', lw=0.5, label='LSTM')
-    Recall_plot_test.plot(range(1, 8), Recall_persistence_test, color='cyan',
-                          lw=1.5, label='Reference (persistence)')
-    Recall_plot_test.set_ylabel('Recall')
-    Recall_plot_test.set_xticks(ticks=range(1, 8))
-    Recall_plot_test.set_ylim(0, 1)
-    Recall_plot_test.annotate('(c)', (1, 0.9))
-    plt.legend(Recall_plot_test.get_legend_handles_labels()[0][-2:],
-               Recall_plot_test.get_legend_handles_labels()[1][-2:],
-               loc='lower left', frameon=False)
+#     for m in range(NUMMODELS):
+#         Recall_plot_test.plot(range(1, 8), Recall_test[:, m],
+#                               color='red', lw=0.5, label='LSTM')
+#     Recall_plot_test.plot(range(1, 8), Recall_persistence_test, color='cyan',
+#                           lw=1.5, label='Reference (persistence)')
+#     Recall_plot_test.set_ylabel('Recall')
+#     Recall_plot_test.set_xticks(ticks=range(1, 8))
+#     Recall_plot_test.set_ylim(0, 1)
+#     Recall_plot_test.annotate('(c)', (1, 0.9))
+#     plt.legend(Recall_plot_test.get_legend_handles_labels()[0][-2:],
+#                Recall_plot_test.get_legend_handles_labels()[1][-2:],
+#                loc='lower left', frameon=False)
 
-if SAVEFIGS is True:
-    metrics_fig_test.savefig(FIGPATH+'metrics_test.png')
-    metrics_fig_test.savefig(FIGPATH+'metrics_test.pdf')
+# if SAVEFIGS is True:
+#     metrics_fig_test.savefig(FIGPATH+'metrics_test.png')
+#     metrics_fig_test.savefig(FIGPATH+'metrics_test.pdf')
 
 # %% Perform sensitivity analysis
 

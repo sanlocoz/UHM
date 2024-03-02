@@ -47,7 +47,7 @@ FIGPATH = ('D:\\Wageningen\\Period 4\\Part 2\\project\\salt_intrusion_lstm-main\
 WD = ('D:\\Wageningen\\Period 4\\Part 2\\project\\salt_intrusion_lstm-main\\salt_intrusion_lstm-main\\')
 
 SAVEFIGS = True  # True if figures should be saved
-NUMMODELS = 1  # number of models in the ensemble
+NUMMODELS = 3  # number of models in the ensemble
 N_PAST = 5  # number of days in the past used to make a prediction
 N_FUTURE = 7  # number of days in the future for which to make a prediction
 
@@ -351,7 +351,6 @@ def ensemble_forecast(models, data, nfuture, saltvars, qtyvars):
         forecast[m, 0, :, :] = model.predict([salt_in, qty_in])
         # Backtransform the forecast from normalized scores to real
         # concentrations.
-        pdb.set_trace()
         forecast_copies = np.hstack(
             [forecast[m, 0, :, :], forecast[m, 0, :, 1:]])
         forecast_real[m, 0, :, :] = scaler.inverse_transform(
