@@ -642,7 +642,7 @@ forecast_fig.suptitle('Forecast of ' + namearea + " " + drainagetype + ' Dischar
 
 if TEST is True:
     forecast_test, forecast_real_test = ensemble_forecast(
-        models, test_scaled, N_FUTURE, vars_[0:12], vars_[12:23])
+        models, test_scaled, N_FUTURE, vars_[0:N_PRED], vars_[N_PRED:N_PRED+N_OTHERVAR])
 
 
 # %% Set up an alternative model to compare skill (TEST)
@@ -654,137 +654,76 @@ if TEST is True:
 # %% Plot forecasts and fits (test)
 
 if TEST is True:
-    forecast_fig_test, forecast_axs_test = plt.subplots(
-        3, 2, figsize=(10, 10), sharex=False, sharey=False)
-    forecast_1_test = forecast_axs_test[0, 0]
-    forecast_4_test = forecast_axs_test[1, 0]
-    forecast_7_test = forecast_axs_test[2, 0]
-
-    lowbound1_test = np.amin(forecast_real_test[:, 0, :365, 1], axis=0)
-    highbound1_test = np.amax(forecast_real_test[:, 0, :365, 1], axis=0)
-    medianval1_test = np.median(forecast_real_test[:, 0, :365, 1], axis=0)
-
-    forecast_1_test.fill_between(test.index[N_PAST:N_PAST+365],
-                                 lowbound1_test, highbound1_test,
-                                 label='predicted', color='pink')
-    forecast_1_test.plot(test.index[N_PAST:N_PAST+365], medianval1_test,
-                         label='predicted', linestyle="-", lw=0.5, color='red')
-    forecast_1_test.plot(test.index, test.ClKr400Mean,
-                         label='observed', linestyle="-", lw=0.5, color='blue')
-    forecast_1_test.set_xlim(
-        datetime(2018, 1, 1, 0, 0, 0), datetime(2019, 1, 1, 0, 0, 0))
-    forecast_1_test.set_xticks(ticks=[datetime(2018, 1, 1, 0, 0, 0),
-                                      datetime(2018, 4, 1, 0, 0, 0),
-                                      datetime(2018, 7, 1, 0, 0, 0),
-                                      datetime(2018, 10, 1, 0, 0, 0)],
-                               labels=[])
-    forecast_1_test.set_ylim(0, 2000)
-    forecast_1_test.set_ylabel('[Cl] (mg/L)')
-    forecast_1_test.set(title='Forecast (2018)')
-    forecast_1_test.annotate('(a) t+1', (datetime(2018, 1, 10, 0, 0, 0), 1800))
-    forecast_1_test.legend(['predicted range', 'predicted median', 'observed'],
-                           loc=(0.05, 0.6), frameon=False)
-
-    lowbound4_test = np.amin(forecast_real_test[:, 3, :365, 1], axis=0)
-    highbound4_test = np.amax(forecast_real_test[:, 3, :365, 1], axis=0)
-    medianval4_test = np.median(forecast_real_test[:, 3, :365, 1], axis=0)
-
-    forecast_4_test.fill_between(test.index[N_PAST+3:N_PAST+3+365],
-                                 lowbound4_test, highbound4_test,
-                                 label='predicted', color='pink')
-    forecast_4_test.plot(test.index[N_PAST+3:N_PAST+3+365],
-                         medianval4_test,
-                         label='predicted', linestyle="-", lw=0.5, color='red')
-    forecast_4_test.plot(test.index, test.ClKr400Mean,
-                         label='observed', linestyle="-", lw=0.5, color='blue')
-    forecast_4_test.set_xlim(
-        datetime(2018, 1, 1, 0, 0, 0), datetime(2019, 1, 1, 0, 0, 0))
-    forecast_4_test.set_xticks(ticks=[datetime(2018, 1, 1, 0, 0, 0),
-                                      datetime(2018, 4, 1, 0, 0, 0),
-                                      datetime(2018, 7, 1, 0, 0, 0),
-                                      datetime(2018, 10, 1, 0, 0, 0)],
-                               labels=[])
-    forecast_4_test.set_ylim(0, 2000)
-    forecast_4_test.set_ylabel('[Cl] (mg/L)')
-    forecast_4_test.annotate('(c) t+4', (datetime(2018, 1, 10, 0, 0, 0), 1800))
-
-    lowbound7_test = np.amin(forecast_real_test[:, 6, :365, 1], axis=0)
-    highbound7_test = np.amax(forecast_real_test[:, 6, :365, 1], axis=0)
-    medianval7_test = np.median(forecast_real_test[:, 6, :365, 1], axis=0)
-
-    forecast_7_test.fill_between(test.index[N_PAST+6:N_PAST+6+365],
-                                 lowbound7_test, highbound7_test,
-                                 label='predicted', color='pink')
-    forecast_7_test.plot(test.index[N_PAST+6:N_PAST+6+365],
-                         medianval7_test,
-                         label='predicted', linestyle="-", lw=0.5, color='red')
-    forecast_7_test.plot(test.index, test.ClKr400Mean,
-                         label='observed', linestyle="-", lw=0.5, color='blue')
-    forecast_7_test.set_xlim(
-        datetime(2018, 1, 1, 0, 0, 0), datetime(2019, 1, 1, 0, 0, 0))
-    forecast_7_test.set_xticks(ticks=[datetime(2018, 1, 1, 0, 0, 0),
-                                      datetime(2018, 4, 1, 0, 0, 0),
-                                      datetime(2018, 7, 1, 0, 0, 0),
-                                      datetime(2018, 10, 1, 0, 0, 0)],
-                               labels=['Jan', 'Apr', 'Jul', 'Oct'])
-    forecast_7_test.set_ylim(0, 2000)
-    forecast_7_test.set_xlabel(2018)
-    forecast_7_test.set_ylabel('[Cl] (mg/L)')
-    forecast_7_test.annotate('(e) t+7', (datetime(2018, 1, 10, 0, 0, 0), 1800))
-
-    fit_1_test = forecast_axs_test[0, 1]
-    fit_4_test = forecast_axs_test[1, 1]
-    fit_7_test = forecast_axs_test[2, 1]
-
-    for m in range(NUMMODELS):
-        fit_1_test.plot(test.ClKr400Mean[N_PAST:-N_FUTURE],
-                        forecast_real_test[m, 0, :, 1],
+    
+    NUMTOPLOT = int(3*30*24/3) #3 MONTH
+    LEADTIME = [0,0,0]
+    SCALES = [1,16,2880]
+    VARPLOT = 'QrP'
+    
+    namearea = "Pampus-Blokkerhoek" if VARPLOT[2] == "P" else "Noorderwagenplein"
+    drainagetype = "Rain" if VARPLOT[1]=="r" else "Drain"
+    
+    forecast_fig, forecast_axs = plt.subplots(3, 2, figsize=(10, 10),
+                                              sharex=False, sharey=False)
+    
+    
+    for i in range(len(SCALES)):
+        VARTOPLOT = VARPLOT + str(SCALES[i])
+        
+        indexToPlot = list(vars_).index(VARTOPLOT)
+        forecast = forecast_axs[i, 0]
+        # Calculate the upper and lower bound and median of predicted values
+        lowbound1 = np.amin(forecast_real_test[:, LEADTIME[i], : NUMTOPLOT, indexToPlot], axis=0)
+        highbound1 = np.amax(forecast_real_test[:, LEADTIME[i], : NUMTOPLOT, indexToPlot], axis=0)
+        medianval1 = np.median(forecast_real_test[:,LEADTIME[i], : NUMTOPLOT, indexToPlot], axis=0)
+        ylim = max(highbound1*1.2)
+    # Plot predicted and observed values in the first year of the training dataset
+    # for lead time 1.
+        forecast.fill_between(test.index[N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT], lowbound1, highbound1,
+                                label='predicted', color='pink')
+        forecast.plot(test.index[N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT], medianval1,
+                        label='predicted', linestyle="-", lw=0.5, color='red')
+        forecast.plot(test.index[N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT], test[VARTOPLOT][N_PAST+LEADTIME[i]:N_PAST+LEADTIME[i]+NUMTOPLOT],
+                        label='observed', linestyle="-", lw=0.5, color='blue')
+        forecast.set_xlim(datetime(1980, 1, 1, 0, 0, 0),
+                            datetime(1980, 4, 1, 0, 0, 0))
+        forecast.set_xticks(ticks=[datetime(1980, 1, 1, 0, 0, 0),
+                                    datetime(1980, 2, 1, 0, 0, 0),datetime(1980, 3, 1, 0, 0, 0),datetime(1980, 4, 1, 0, 0, 0)
+                                  ],labels=[])
+        forecast.set_ylim(0, ylim)
+        forecast.set_ylabel("Q"+str(SCALES[i]) + " (mm)")
+        forecast.annotate('(a) t+1', (datetime(1974, 1, 10, 0, 0, 0), 1400))
+        if(i == 0):
+            forecast.set(title='Forecast (1980)')
+            forecast.legend(['predicted range', 'predicted median', 'observed'],
+                          loc=(0.05, 0.65), frameon=False)
+        
+        if(i == len(SCALES)-1):
+            forecast.set_xticks(ticks=[datetime(1980, 1, 1, 0, 0, 0),
+                                          datetime(1980, 2, 1, 0, 0, 0),
+                                          datetime(1980, 3, 1, 0, 0, 0), datetime(1980, 4, 1, 0, 0, 0)], labels=["Jan", "Feb", "Mar", "Apr"])
+            forecast.set_xlabel(1980)
+        
+        fit = forecast_axs[i, 1]
+    
+        for m in range(NUMMODELS):
+            fit.plot(test[VARTOPLOT][N_PAST+LEADTIME[i]:-N_FUTURE+LEADTIME[i]], forecast_real_test[m, LEADTIME[i], :, indexToPlot],
                         marker=',', color='red', linestyle="")
-    fit_1_test.plot([0, 2000], [0, 2000], color='black')
-    fit_1_test.set_aspect('equal', 'box')
-    fit_1_test.set_xlim(0, 2000)
-    fit_1_test.set_ylim(0, 2000)
-    fit_1_test.set_ylabel('[Cl] (mg/L) predicted')
-    fit_1_test.set_title('Fit (2018-2020)')
-    fit_1_test.annotate('(b) t+1', (100, 1800))
-    fit_1_test.set_xticks(ticks=[0, 500, 1000, 1500, 2000], labels=[])
-    fit_1_test.set_yticks(ticks=[0, 500, 1000, 1500, 2000])
+        fit.plot([0, 2000], [0, 2000], color='black',)
+        fit.set_aspect('equal', 'box')
+        fit.set_xlim(0, ylim)
+        fit.set_ylim(0, ylim)
+        fit.set_ylabel("Q"+str(SCALES[i])+" predicted (mm)")
+        fit.annotate('(b) t+1', (100, 1400))
+        
+        if(i==0):
+            fit.set_title('Fit (1980-1983)')
+            
+        if(i==len(SCALES)-1):
+            fit.set_xlabel("Q observed (mm)")
+            
+    forecast_fig.suptitle('Forecast of ' + namearea + " " + drainagetype + ' Discharge (' + VARPLOT + ', validation)')
 
-    for m in range(NUMMODELS):
-        fit_4_test.plot(test.ClKr400Mean[N_PAST+3:-N_FUTURE+3],
-                        forecast_real_test[m, 3, :, 1],
-                        marker=',', color='red', linestyle="")
-    fit_4_test.plot([0, 2000], [0, 2000], color='black')
-    fit_4_test.set_aspect('equal', 'box')
-    fit_4_test.set_xlim(0, 2000)
-    fit_4_test.set_ylim(0, 2000)
-    fit_4_test.set_ylabel('[Cl] (mg/L) predicted')
-    fit_4_test.annotate('(d) t+4', (100, 1800))
-    fit_4_test.set_xticks(ticks=[0, 500, 1000, 1500, 2000], labels=[])
-    fit_4_test.set_yticks(ticks=[0, 500, 1000, 1500, 2000])
-
-    for m in range(NUMMODELS):
-        fit_7_test.plot(test.ClKr400Mean[N_PAST+6:-N_FUTURE+6],
-                        forecast_real_test[m, 6, :, 1],
-                        marker=',', color='red', linestyle="")
-    fit_7_test.plot([0, 2000], [0, 2000], color='black')
-    fit_7_test.set_aspect('equal', 'box')
-    fit_7_test.set_xlim(0, 2000)
-    fit_7_test.set_ylim(0, 2000)
-    fit_7_test.set_xlabel('[Cl] (mg/l) observed')
-    fit_7_test.set_ylabel('[Cl] (mg/L) predicted')
-    fit_7_test.annotate('(f) t+7', (100, 1800))
-    fit_7_test.set_xticks(ticks=[0, 500, 1000, 1500, 2000])
-    fit_7_test.set_yticks(ticks=[0, 500, 1000, 1500, 2000])
-
-    forecast_fig_test.suptitle(
-        '''Forecast of mean [Cl] at Krimpen aan de IJssel,
-        depth=-4.00m a.m.s.l. \n (test)''')
-    forecast_fig_test.tight_layout()
-
-if SAVEFIGS is True:
-    forecast_fig_test.savefig(FIGPATH+'Forecast_2018_test.png')
-    forecast_fig_test.savefig(FIGPATH+'Forecast_2018_test.pdf')
 
 
 # %% Compute metrics (test)
